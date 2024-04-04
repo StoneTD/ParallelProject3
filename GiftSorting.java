@@ -20,6 +20,7 @@ class Node
     public Node(int value)
     {
         this.value = value;
+        locked = new ReentrantLock();
     }
 
     public int value()
@@ -44,7 +45,8 @@ class Node
 
     public void unlock()
     {
-        locked.unlock();
+        if (locked.isHeldByCurrentThread())
+            locked.unlock();
     }
 
     // Used to insert a node into the list
@@ -108,7 +110,7 @@ public class GiftSorting
         
         for (int i = 0; i < numServants; i++)
             servantList.add(new Servant(this));
-            
+
         for (int i = 0; i < numServants; i++)
             servantList.get(i).run();
     }

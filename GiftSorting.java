@@ -5,6 +5,7 @@
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -66,22 +67,19 @@ class Node
 class Servant extends Thread
 {
     private GiftSorting sharedReference;
-    private boolean running;
 
     // Constructor
     public Servant(GiftSorting giftySorty)
     {
         sharedReference = giftySorty;
-        running = true;
     }
 
     @Override
     public void run()
     {
-
-        while (running)
+        while (!sharedReference.isDone())
         {
-
+            sharedReference.doWork();
         }
     }
 }
@@ -95,20 +93,29 @@ public class GiftSorting
     private List<Servant> servantList;
     private List<Integer> giftBag;  // The initial list of gifts
     private List<Integer> giftList;  // The list of gifts in the linked list
+    private boolean done;  // How we tell the threads to go home
     private Node head;
 
     // Constructor
     public GiftSorting()
     {
-        for (int i = 0; i < numGuests; i++)
-            giftBag.add(i);
-
-        for (int i = 0; i < numServants; i++)
-        {
-            servantList.add(new Servant(this));
-            servantList.get(i).run();
-        }
+        servantList = new ArrayList<>();
+        giftBag = new ArrayList<>();
+        giftList = new ArrayList<>();
         
+        for (int i = 0; i < numGuests; i++)
+          giftBag.add(i);
+        
+        for (int i = 0; i < numServants; i++)
+            servantList.add(new Servant(this));
+            
+        for (int i = 0; i < numServants; i++)
+            servantList.get(i).run();
+    }
+
+    public boolean isDone()
+    {
+        return done;
     }
 
     public void addGift(int giftId) throws IOException
@@ -288,7 +295,7 @@ public class GiftSorting
 
             temp = temp.next();
         }
-        
+
         printy.println("Gift " + giftId + " was not found in the list");
         printy.close();
         return false;
@@ -332,6 +339,11 @@ public class GiftSorting
             System.out.println("Cry about it");
         }
 
+        // All gifts are out of the bag and out of the list, everyone can go home
+        if (giftBag.size() <= 0 && giftList.size() <= 0)
+        {
+            done = true;
+        }
     }
     
     
@@ -348,6 +360,16 @@ public class GiftSorting
     */
     public static void main(String[] args)
     {
+        long startTime = System.currentTimeMillis();
 
+        GiftSorting giftySorty = new GiftSorting();
+        while (!giftySorty.isDone())
+        {
+            // Idk we just wait
+        }
+
+        long endTime = System.currentTimeMillis();
+
+        System.out.println("Program finished in " + (endTime - startTime)/1000.0 + " seconds");
     }
 }

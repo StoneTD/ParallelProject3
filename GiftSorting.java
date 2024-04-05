@@ -6,6 +6,7 @@
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -79,9 +80,21 @@ class Servant extends Thread
     @Override
     public void run()
     {
+        int choice;
+
+        // Randomly choose between adding, removing, or searching until we're done
         while (!sharedReference.isDone())
         {
-            sharedReference.doWork();
+            choice = (int)(Math.random() * 1000);
+
+            if (choice > 499)
+                sharedReference.addGift();
+            else
+                sharedReference.removeGift();
+            
+            // I'm just having fun with this 
+            if (choice < 50 || choice > 450)
+                sharedReference.findGift();
         }
     }
 }
@@ -95,18 +108,22 @@ public class GiftSorting
     private List<Servant> servantList;
     private List<Integer> giftBag;  // The initial list of gifts
     private List<Integer> giftList;  // The list of gifts in the linked list
-    private boolean done;  // How we tell the threads to go home
     private Node head;
 
+    private PrintWriter printy;
+
     // Constructor
-    public GiftSorting()
+    public GiftSorting() throws IOException
     {
         servantList = new ArrayList<>();
         giftBag = new ArrayList<>();
         giftList = new ArrayList<>();
-        
+        printy = new PrintWriter("giftThankYous.txt");
+
         for (int i = 0; i < numGuests; i++)
           giftBag.add(i);
+
+        Collections.shuffle(giftBag);
         
         for (int i = 0; i < numServants; i++)
             servantList.add(new Servant(this));
@@ -117,12 +134,29 @@ public class GiftSorting
 
     public boolean isDone()
     {
-        return done;
+        return (giftBag.size() == 0 && head == null);
     }
 
-    public void addGift(int giftId) throws IOException
+    public int numGuests()
     {
-        PrintWriter printy = new PrintWriter("output.txt");
+        return numGuests;
+    }
+
+    public int bagSize()
+    {
+        return giftBag.size();
+    }
+
+    public void addGift()
+    {
+        if (giftBag.size() == 0)
+            return;
+
+        addGift(giftBag.removeFirst());
+    }
+
+    private void addGift(int giftId)
+    {
         Node newNode = new Node(giftId);
         Node prev, curr;
 
@@ -130,8 +164,7 @@ public class GiftSorting
         {
             head = newNode;
             giftList.add(giftId);
-            printy.println("Gift " + giftId + " has been added");
-            printy.close();
+            // printy.println("Gift " + giftId + " has been added");
             return;
         }
         
@@ -142,8 +175,7 @@ public class GiftSorting
             newNode.setNext(head);
             head = newNode;
             giftList.add(giftId);
-            printy.println("Gift " + giftId + " has been added");
-            printy.close();
+            // printy.println("Gift " + giftId + " has been added");
             return;
         }
 
@@ -151,8 +183,7 @@ public class GiftSorting
         {
             newNode.setPrev(head);
             giftList.add(giftId);
-            printy.println("Gift " + giftId + " has been added");
-            printy.close();
+            // printy.println("Gift " + giftId + " has been added");
             return;
         }
 
@@ -173,7 +204,7 @@ public class GiftSorting
 
             newNode.setPrev(prev);
             giftList.add(giftId);
-            printy.println("Gift " + giftId + " has been added");
+            // printy.println("Gift " + giftId + " has been added");
         }
         // We've ran into the end of the linked list
         catch(NullPointerException nilly)
@@ -181,25 +212,34 @@ public class GiftSorting
             curr = new Node(giftId);
             curr.setPrev(prev);
             giftList.add(giftId);
-            printy.println("Gift " + giftId + " has been added");
+            // printy.println("Gift " + giftId + " has been added");
         }
         finally
         {
             prev.unlock();
             curr.unlock();
-            printy.close();
         }
     }
 
-    public boolean removeGift(int giftId) throws IOException
+    public boolean removeGift()
+    {
+        if (giftList.size() == 0)
+            return false;
+
+        int giftId = (int)(Math.random() * giftList.size());
+        if (giftId == giftList.size())
+            giftId--;
+
+        return removeGift(giftList.remove(giftId));
+    }
+
+    private boolean removeGift(int giftId)
     {
         Node prev, curr;
         
         // Make sure the linked list isn't empty first
         if (head == null)
             return false;
-
-        PrintWriter printy = new PrintWriter("output.txt");
         
         prev = head;
         prev.lock();
@@ -211,13 +251,11 @@ public class GiftSorting
                 {
                     head = null;
                     prev.unlock();
-                    printy.println("Gift " + giftId + " has been removed");
-                    printy.close();
+                    printy.println("Thank you guest " + giftId + "!");
                     return true;
                 }
             prev.unlock();
-            printy.println("Gift " + giftId + " was not found in the list");
-            printy.close();
+            // printy.println("Gift " + giftId + " was not found in the list");
             return false;
         }
 
@@ -226,8 +264,7 @@ public class GiftSorting
         {
             head = head.next();
             prev.unlock();
-            printy.println("Gift " + giftId + " has been removed");
-            printy.close();
+            printy.println("Thank you guest " + giftId + "!");
             return true;
         }
 
@@ -243,16 +280,14 @@ public class GiftSorting
             if (curr.value() == giftId)
             {
                 prev.setNext(curr.next());
-                printy.println("Gift " + giftId + " has been removed");
-                printy.close();
+                printy.println("Thank you guest " + giftId + "!");
                 return true;
             }
 
             // Terminate early if possible
             if (curr.value() > giftId)
             {
-                printy.println("Gift " + giftId + " was not found in the list");
-                printy.close();
+                // printy.println("Gift " + giftId + " was not found in the list");
                 return false;
             }
 
@@ -262,19 +297,25 @@ public class GiftSorting
         }
 
         prev.unlock();
-        printy.println("Gift " + giftId + " was not found in the list");
-        printy.close();
+        // printy.println("Gift " + giftId + " was not found in the list");
         return false;     
     }
 
-    public boolean findGift(int giftId) throws IOException
+    public boolean findGift()
     {
-        PrintWriter printy = new PrintWriter("output.txt");
+        int giftId = (int)(Math.random() * numGuests);
 
+        if (giftId == numGuests)
+            giftId--;
+        
+        return findGift(giftId);
+    }
+
+    private boolean findGift(int giftId)
+    {
         if (head == null)
         {
-            printy.println("List was empty, no gifts found");
-            printy.close();
+            // printy.println("List was empty, no gifts found");
             return false;
         }
         Node temp = head;
@@ -283,91 +324,38 @@ public class GiftSorting
         {
             if (temp.value() == giftId)
             {
-                printy.println("Gift " + giftId + " was found in the list");
-                printy.close();
+                // printy.println("Gift " + giftId + " was found in the list");
                 return true;
             }
             
             if (temp.value() > giftId)
             {
-                printy.println("Gift " + giftId + " was not found in the list");
-                printy.close();
+                // printy.println("Gift " + giftId + " was not found in the list");
                 return false;
             }
 
             temp = temp.next();
         }
 
-        printy.println("Gift " + giftId + " was not found in the list");
-        printy.close();
+        // printy.println("Gift " + giftId + " was not found in the list");
         return false;
     }
     
-    public void doWork()
-    {
-        // If there are more than half the gifts left still in the bag,
-        // prioritize adding to the list, after that point everything is equally likely
-        int ranChoice;
-        if (giftBag.size() > (numGuests / 2))
-            ranChoice = (int) (Math.random() * 2 + 1);
-        else
-            ranChoice = (int) (Math.random() * 3 + 1);
-
-        // We can't add to the list if the bag is empty
-        if (giftBag.size() <= 0)
-            ranChoice += 1;
-
-        try
-        {
-            switch (ranChoice) 
-            {
-                case 1:
-                    addGift(giftBag.remove((int)(Math.random() * giftBag.size())));
-                    break;
-                case 2:
-                    findGift((int)(Math.random() * numGuests));
-                    break;
-                case 3:
-                    removeGift(giftList.remove((int)(Math.random() * giftList.size())));
-                    break;
-    
-                default:
-                    removeGift(giftList.remove((int)(Math.random() * giftList.size())));
-                    break;
-            }
-        }
-        catch(IOException iono)
-        {
-            System.out.println("Cry about it");
-        }
-
-        // All gifts are out of the bag and out of the list, everyone can go home
-        if (giftBag.size() <= 0 && giftList.size() <= 0)
-        {
-            done = true;
-        }
-    }
-    
-    
-    /*
-    4 Threads
-    Each thread will either add nodes to a sorted linked list or remove a node from the list
-    (So the list needs a lock)
-    Randomly they will also be forced to look for a particular node ID in the list
-
-    For input I guess we just make an arraylist of size 500,000 and randomly pick indexes from it
-    Each index will have an ID, which we can just have be the original index
-    Whenever a "gift is added" to the list we just remove it from the arraylist 
-
-    */
     public static void main(String[] args)
     {
         long startTime = System.currentTimeMillis();
 
-        GiftSorting giftySorty = new GiftSorting();
-        while (!giftySorty.isDone())
+        try
         {
-            // Idk we just wait
+            GiftSorting giftySorty = new GiftSorting();
+            while (!giftySorty.isDone())
+            {
+                // Idk we just wait
+            }
+        }
+        catch(IOException a)
+        {
+            System.out.println("cry");
         }
 
         long endTime = System.currentTimeMillis();

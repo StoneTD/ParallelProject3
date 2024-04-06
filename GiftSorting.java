@@ -340,26 +340,4 @@ public class GiftSorting
         // printy.println("Gift " + giftId + " was not found in the list");
         return false;
     }
-    
-    public static void main(String[] args)
-    {
-        long startTime = System.currentTimeMillis();
-
-        try
-        {
-            GiftSorting giftySorty = new GiftSorting();
-            while (!giftySorty.isDone())
-            {
-                // Idk we just wait
-            }
-        }
-        catch(IOException a)
-        {
-            System.out.println("cry");
-        }
-
-        long endTime = System.currentTimeMillis();
-
-        System.out.println("Program finished in " + (endTime - startTime)/1000.0 + " seconds");
-    }
 }
